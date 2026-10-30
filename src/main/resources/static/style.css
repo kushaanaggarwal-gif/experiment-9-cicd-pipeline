@@ -1,0 +1,354 @@
+/* Minimal CSS for Experiment 9 CI/CD Pipeline Dashboard */
+:root {
+  --bg-color: #ffffff;
+  --surface-color: #fcfcfc;
+  --border-color: #d1d5db;
+  --text-primary: #111827;
+  --text-secondary: #4b5563;
+  --text-muted: #6b7280;
+  --accent-color: #2563eb;
+  --success-color: #15803d;
+  --success-bg: #f0fdf4;
+  --error-color: #b91c1c;
+  --error-bg: #fef2f2;
+  --warning-color: #b45309;
+  --warning-bg: #fffbeb;
+  --code-bg: #f3f4f6;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  line-height: 1.5;
+  padding: 24px;
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+header {
+  border-bottom: 2px solid var(--border-color);
+  padding-bottom: 16px;
+  margin-bottom: 24px;
+}
+
+header h1 {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 6px;
+}
+
+header p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.nav-links {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.nav-links a {
+  color: var(--accent-color);
+  text-decoration: none;
+  font-size: 0.9rem;
+  border-bottom: 1px dotted var(--accent-color);
+}
+
+.nav-links a:hover {
+  text-decoration: underline;
+}
+
+section {
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  padding: 20px;
+  margin-bottom: 24px;
+  background-color: var(--surface-color);
+}
+
+section h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+section h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 16px 0 8px 0;
+}
+
+p, ul {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+}
+
+ul {
+  padding-left: 20px;
+}
+
+li {
+  margin-bottom: 4px;
+}
+
+/* Status indicator badge */
+.badge {
+  display: inline-block;
+  padding: 2px 8px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: 3px;
+  border: 1px solid var(--border-color);
+  vertical-align: middle;
+}
+
+.badge-pass {
+  background-color: var(--success-bg);
+  color: var(--success-color);
+  border-color: #86efac;
+}
+
+.badge-fail {
+  background-color: var(--error-bg);
+  color: var(--error-color);
+  border-color: #fca5a5;
+}
+
+.badge-skip {
+  background-color: var(--warning-bg);
+  color: var(--warning-color);
+  border-color: #fde047;
+}
+
+.badge-info {
+  background-color: #eff6ff;
+  color: var(--accent-color);
+  border-color: #bfdbfe;
+}
+
+/* Pipeline Flow */
+.flow-diagram {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 16px 0;
+  padding: 12px;
+  background-color: var(--code-bg);
+  border: 1px solid var(--border-color);
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+}
+
+.flow-step {
+  padding: 6px 10px;
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  font-weight: 500;
+}
+
+.flow-arrow {
+  color: var(--text-muted);
+  font-weight: bold;
+}
+
+/* Code Blocks */
+pre {
+  background-color: var(--code-bg);
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  border-radius: 4px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.85rem;
+  line-height: 1.45;
+  margin: 10px 0;
+  color: #1f2937;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  background-color: var(--code-bg);
+  padding: 2px 4px;
+  border-radius: 2px;
+}
+
+pre code {
+  background-color: transparent;
+  padding: 0;
+}
+
+/* Forms & Controls */
+.control-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+input[type="number"], input[type="text"], select {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  padding: 6px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background-color: #ffffff;
+}
+
+button {
+  font-family: var(--font-sans);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 3px;
+  background-color: #ffffff;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+button.btn-primary {
+  background-color: var(--accent-color);
+  color: #ffffff;
+  border-color: var(--accent-color);
+}
+
+button.btn-primary:hover {
+  background-color: #1d4ed8;
+}
+
+button.btn-danger {
+  background-color: #dc2626;
+  color: #ffffff;
+  border-color: #dc2626;
+}
+
+button.btn-danger:hover {
+  background-color: #b91c1c;
+}
+
+/* Results Display Box */
+.result-box {
+  background-color: #ffffff;
+  border: 1px solid var(--border-color);
+  padding: 12px;
+  margin-top: 10px;
+  font-size: 0.9rem;
+}
+
+/* Tables */
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 12px 0;
+  font-size: 0.88rem;
+}
+
+th, td {
+  border: 1px solid var(--border-color);
+  padding: 8px 12px;
+  text-align: left;
+}
+
+th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+}
+
+tr:nth-child(even) {
+  background-color: #fafafa;
+}
+
+/* Canary Split Bar */
+.traffic-bar-container {
+  border: 1px solid var(--border-color);
+  height: 24px;
+  display: flex;
+  margin: 12px 0;
+  border-radius: 2px;
+  overflow: hidden;
+  font-size: 0.75rem;
+  font-weight: bold;
+  text-align: center;
+  line-height: 24px;
+}
+
+.traffic-stable {
+  background-color: #93c5fd;
+  color: #1e3a8a;
+  transition: width 0.3s;
+}
+
+.traffic-canary {
+  background-color: #86efac;
+  color: #064e3b;
+  transition: width 0.3s;
+}
+
+/* Logs Box */
+.logs-console {
+  background-color: #1e293b;
+  color: #f8fafc;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 12px;
+  height: 200px;
+  overflow-y: auto;
+  border-radius: 3px;
+  border: 1px solid #334155;
+}
+
+.log-entry {
+  margin-bottom: 4px;
+  word-break: break-all;
+}
+
+/* Sub-card without heavy decoration */
+.card-plain {
+  border: 1px solid var(--border-color);
+  padding: 14px;
+  margin-bottom: 14px;
+  background-color: #ffffff;
+}
+
+.simulation-tag {
+  font-size: 0.75rem;
+  color: var(--warning-color);
+  font-weight: 600;
+  text-transform: uppercase;
+  margin-left: 6px;
+}
+
+footer {
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  padding-top: 16px;
+  margin-top: 32px;
+}

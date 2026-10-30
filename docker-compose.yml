@@ -1,0 +1,36 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: experiment-9-cicd:latest
+    container_name: experiment-9-cicd-app
+    ports:
+      - "8089:8089"
+    environment:
+      - SERVER_PORT=8089
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/testdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=secret_password
+    depends_on:
+      postgres-db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  postgres-db:
+    image: postgres:15-alpine
+    container_name: experiment-9-postgres
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_DB=testdb
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=secret_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d testdb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped

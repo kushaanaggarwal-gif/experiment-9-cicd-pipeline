@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Experiment 9: CI/CD Pipeline with Testing & Deployment</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Header -->
+  <header>
+    <h1>Experiment 9: CI/CD Pipeline with Testing &amp; Deployment</h1>
+    <p>Complete Enterprise Application (Inventory Management) with JUnit 5, MockMvc, Pact Contract Testing, Testcontainers, Git Repository CI, Docker Registry, and Canary Deployment.</p>
+    
+    <div class="nav-links">
+      <a href="#overview">A. Overview</a>
+      <a href="#live-app">B. Live Application</a>
+      <a href="#testing">C. Testing Module</a>
+      <a href="#ci-pipeline">D. Git &amp; CI Pipeline</a>
+      <a href="#docker-cd">E. Docker &amp; CD</a>
+      <a href="#canary">F. Canary Deployment</a>
+      <a href="#reports">G. Reports &amp; Logs</a>
+    </div>
+  </header>
+
+  <!-- Section A: Overview -->
+  <section id="overview">
+    <h2>A. Overview</h2>
+    <p><strong>Aim:</strong> To design, build, and demonstrate an end-to-end Continuous Integration and Continuous Deployment (CI/CD) pipeline for a full-stack Spring Boot inventory management application featuring automated unit testing (JUnit 5), API integration testing (MockMvc), contract testing (Pact), real container testing (Testcontainers), local Git repository tracking, Docker image containerization, and canary deployment release management.</p>
+
+    <div class="card-plain">
+      <h3>What is CI/CD?</h3>
+      <p><strong>Continuous Integration (CI):</strong> The automated practice of frequently merging code changes into a shared Git repository. Each push or pull request triggers an automated build and multi-tier test suite to detect bugs and integration mismatches immediately.</p>
+      <p><strong>Continuous Delivery / Deployment (CD):</strong> The automated process of packaging validated code into deployable container artifacts (Docker images) and releasing them to target infrastructure using safe rollout strategies such as Canary releases.</p>
+    </div>
+
+    <h3>Pipeline Execution Flow</h3>
+    <div class="flow-diagram">
+      <div class="flow-step">1. Git Push (main)</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">2. Maven Build</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">3. Automated Tests</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">4. Docker Image</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">5. Container Registry</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">6. Monitoring</div>
+      <div class="flow-arrow">&rarr;</div>
+      <div class="flow-step">7. Canary Rollout</div>
+    </div>
+
+    <div class="control-group">
+      <span>Pipeline Status:</span>
+      <span id="pipeline-status-badge" class="badge badge-info">NOT_RUN</span>
+      <span>Build: <strong id="build-status-text">NOT_RUN</strong></span>
+      <span>Deployment: <strong id="deployment-status-text">v1.0.0 (Stable)</strong></span>
+      <button onclick="refreshOverview()">Refresh Status</button>
+    </div>
+
+    <h3>Pipeline Stages Explained</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Stage</th>
+          <th>Tool / Technology</th>
+          <th>Objective</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>1. Code Push</strong></td>
+          <td>Git / GitHub Repository</td>
+          <td>Developer commits code to the <code>main</code> branch or opens a Pull Request.</td>
+        </tr>
+        <tr>
+          <td><strong>2. Build</strong></td>
+          <td>Apache Maven &amp; JDK 17</td>
+          <td>Compiles Java source code, downloads dependencies, and validates configuration.</td>
+        </tr>
+        <tr>
+          <td><strong>3. Automated Tests</strong></td>
+          <td>JUnit 5, MockMvc, Pact, Testcontainers</td>
+          <td>Executes service unit tests, web integration tests, contract verification, and container tests.</td>
+        </tr>
+        <tr>
+          <td><strong>4. Docker Image</strong></td>
+          <td>Multi-Stage Dockerfile</td>
+          <td>Builds a lightweight, secure container image containing the executable Spring Boot JAR.</td>
+        </tr>
+        <tr>
+          <td><strong>5. Registry &amp; CD</strong></td>
+          <td>Container Registry &amp; GitHub Actions</td>
+          <td>Tags and publishes image (<code>experiment-9-app:latest</code>) ready for cloud deployment.</td>
+        </tr>
+        <tr>
+          <td><strong>6. Monitoring</strong></td>
+          <td>Telemetry &amp; Health Probes</td>
+          <td>Continuously assesses latency, HTTP 200 rates, and error frequencies.</td>
+        </tr>
+        <tr>
+          <td><strong>7. Canary Rollout</strong></td>
+          <td>Reverse Proxy / Router</td>
+          <td>Routes an initial 10% traffic to the canary release (v2.0.0), scaling up to 100% or rolling back on anomaly.</td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- Section B: Live Application -->
+  <section id="live-app">
+    <h2>B. Live Application &mdash; Enterprise Inventory Management</h2>
+    <p>A functional Spring Boot enterprise inventory service managed by the CI/CD pipeline. All CRUD operations, pricing logic, and inventory status transitions are covered by automated tests.</p>
+
+    <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 14px;">
+      <div class="card-plain" style="flex: 1; min-width: 180px; margin-bottom: 0;">
+        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Total Inventory Items</span>
+        <div style="font-size: 1.4rem; font-weight: 700;" id="stat-total-products">0</div>
+      </div>
+      <div class="card-plain" style="flex: 1; min-width: 180px; margin-bottom: 0;">
+        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">In Stock</span>
+        <div style="font-size: 1.4rem; font-weight: 700; color: var(--success-color);" id="stat-in-stock">0</div>
+      </div>
+      <div class="card-plain" style="flex: 1; min-width: 180px; margin-bottom: 0;">
+        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Low Stock (&le; 5)</span>
+        <div style="font-size: 1.4rem; font-weight: 700; color: var(--warning-color);" id="stat-low-stock">0</div>
+      </div>
+      <div class="card-plain" style="flex: 1; min-width: 180px; margin-bottom: 0;">
+        <span style="font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase;">Total Asset Value</span>
+        <div style="font-size: 1.4rem; font-weight: 700;" id="stat-total-value">$0.00</div>
+      </div>
+    </div>
+
+    <!-- Product Controls: Search, Filter, and Add Form -->
+    <div class="card-plain">
+      <div class="control-group" style="justify-content: space-between;">
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <input type="text" id="app-search-input" placeholder="Search by name or SKU..." style="width: 220px;">
+          <select id="app-category-filter">
+            <option value="">All Categories</option>
+            <option value="Networking">Networking</option>
+            <option value="Cloud Tools">Cloud Tools</option>
+            <option value="IoT Devices">IoT Devices</option>
+            <option value="Storage">Storage</option>
+            <option value="DevOps Tools">DevOps Tools</option>
+          </select>
+          <button class="btn-primary" onclick="loadProducts()">Search / Filter</button>
+          <button onclick="resetProductFilters()">Reset</button>
+        </div>
+        <button class="btn-primary" onclick="toggleAddProductForm()">+ Add New Product</button>
+      </div>
+
+      <!-- Add Product Form (Collapsible) -->
+      <div id="add-product-form-container" style="display: none; border-top: 1px solid var(--border-color); padding-top: 14px; margin-top: 12px;">
+        <h4>Create New Inventory Product</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 500;">Product Name *</label>
+            <input type="text" id="new-prod-name" placeholder="e.g. Fiber Channel HBA" style="width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 500;">SKU Code *</label>
+            <input type="text" id="new-prod-sku" placeholder="e.g. HBA-990" style="width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 500;">Category *</label>
+            <select id="new-prod-category" style="width: 100%;">
+              <option value="Networking">Networking</option>
+              <option value="Cloud Tools">Cloud Tools</option>
+              <option value="Storage">Storage</option>
+              <option value="IoT Devices">IoT Devices</option>
+              <option value="DevOps Tools">DevOps Tools</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 500;">Unit Price ($) *</label>
+            <input type="number" id="new-prod-price" value="299.00" step="0.01" style="width: 100%;">
+          </div>
+          <div>
+            <label style="font-size: 0.85rem; font-weight: 500;">Stock Quantity *</label>
+            <input type="number" id="new-prod-stock" value="10" style="width: 100%;">
+          </div>
+          <div style="grid-column: 1 / -1;">
+            <label style="font-size: 0.85rem; font-weight: 500;">Description</label>
+            <input type="text" id="new-prod-desc" placeholder="Product specification..." style="width: 100%;">
+          </div>
+        </div>
+        <div style="margin-top: 12px; display: flex; gap: 8px;">
+          <button class="btn-primary" onclick="submitNewProduct()">Save Product to Inventory</button>
+          <button onclick="toggleAddProductForm()">Cancel</button>
+        </div>
+        <div id="add-product-msg" style="margin-top: 6px; font-size: 0.85rem;"></div>
+      </div>
+
+      <!-- Products Inventory Table -->
+      <table style="margin-top: 14px;">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>SKU</th>
+            <th>Category</th>
+            <th>Price</th>
+            <th>Stock</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="products-table-body">
+          <tr><td colspan="8" style="text-align: center;">Loading inventory data...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- Section C: Testing Module -->
+  <section id="testing">
+    <h2>C. Testing Module (4 Testing Levels)</h2>
+    <p>Automated tests validate application correctness across all layers before code can be merged or deployed.</p>
+
+    <!-- 1. Unit Testing -->
+    <div class="card-plain">
+      <h3>1. Unit Testing &mdash; JUnit 5</h3>
+      <p>Verifies individual methods of <code>CalculatorService</code> and domain logic of <code>ProductService</code> (pricing, discounts, automatic stock status calculation) in complete isolation.</p>
+      
+      <div class="control-group">
+        <label>Operand A: <input type="number" id="calc-a" value="15.0" style="width: 70px;"></label>
+        <label>Operand B: <input type="number" id="calc-b" value="25.0" style="width: 70px;"></label>
+        <label>Expected: <input type="number" id="calc-exp" value="40.0" style="width: 70px;"></label>
+        <button class="btn-primary" onclick="runCalculatorUnitTest()">Run JUnit 5 Test</button>
+      </div>
+
+      <div id="unit-test-result" class="result-box" style="display: none;">
+        <div><strong>Expected:</strong> <span id="unit-expected"></span> | <strong>Actual:</strong> <span id="unit-actual"></span> | <strong>Result:</strong> <span id="unit-status-badge" class="badge"></span></div>
+        <div style="margin-top: 4px; font-size: 0.85rem; color: var(--text-muted);"><span id="unit-message"></span></div>
+      </div>
+
+      <pre><code>// JUnit 5 Test: Automatic Stock Status Rule (src/test/java/com/college/cicd/ProductServiceTest.java)
+@Test
+@DisplayName("Unit Test: Creating product with stock &lt;= 5 calculates LOW_STOCK status")
+void testLowStockCalculation() {
+    Product product = productService.createProduct(new Product(null, "Gateway", "GW-101", "Networking", 499.0, 3, "Desc"));
+    assertEquals("LOW_STOCK", product.getStatus());
+}</code></pre>
+    </div>
+
+    <!-- 2. API Integration Testing -->
+    <div class="card-plain">
+      <h3>2. API Integration Testing &mdash; MockMvc</h3>
+      <p>Verifies web layer controllers (<code>GET /api/posts</code>, <code>GET /api/products</code>, <code>POST /api/products</code>), HTTP status codes, and JSON serialization without starting a network socket.</p>
+
+      <div class="control-group">
+        <button class="btn-primary" onclick="runMockMvcTest()">Execute MockMvc Test (GET /api/posts)</button>
+        <button class="btn-primary" onclick="runMockMvcProductTest()">Execute MockMvc Test (GET /api/products)</button>
+      </div>
+
+      <div id="mockmvc-result" class="result-box" style="display: none;">
+        <div><strong>Endpoint:</strong> <span id="mockmvc-endpoint">GET /api/posts</span></div>
+        <div><strong>HTTP Status Code:</strong> <span id="mockmvc-status" class="badge badge-pass">200 OK</span></div>
+        <div><strong>Test Result:</strong> <span class="badge badge-pass">PASS</span> (Endpoint returned HTTP 200 and verified JSON payload)</div>
+        <div style="margin-top: 6px;"><strong>Response Body:</strong></div>
+        <pre><code id="mockmvc-body"></code></pre>
+      </div>
+
+      <pre><code>// Spring MockMvc Integration Test (src/test/java/com/college/cicd/ProductControllerMockMvcTest.java)
+@Test
+void testGetProductsReturns200() throws Exception {
+    mockMvc.perform(get("/api/products").contentType(MediaType.APPLICATION_JSON))
+           .andExpect(status().isOk())
+           .andExpect(jsonPath("$").isArray())
+           .andExpect(jsonPath("$[0].sku").exists());
+}</code></pre>
+    </div>
+
+    <!-- 3. Contract Testing -->
+    <div class="card-plain">
+      <h3>3. Contract Testing &mdash; Pact</h3>
+      <p>Validates consumer-provider contracts. Guarantees that schema changes (such as renamed field names) do not break client applications before production release.</p>
+
+      <div class="control-group">
+        <label><input type="radio" name="pactMode" value="false" checked> Matching Provider Schema (Expect PASS)</label>
+        <label><input type="radio" name="pactMode" value="true"> Simulate Schema Drift (Breaking Change: Expect FAIL)</label>
+        <button class="btn-primary" onclick="runPactContractTest()">Verify Pact Contract</button>
+      </div>
+
+      <div id="pact-result" class="result-box" style="display: none;">
+        <div><strong>Contract Status:</strong> <span id="pact-status-badge" class="badge"></span></div>
+        <p id="pact-summary" style="margin: 6px 0; font-weight: 500;"></p>
+        <div id="pact-violations-container" style="display: none; margin-bottom: 8px;">
+          <strong style="color: var(--error-color);">Contract Violations Detected:</strong>
+          <ul id="pact-violations-list" style="color: var(--error-color);"></ul>
+        </div>
+        <pre><code id="pact-comparison-body"></code></pre>
+      </div>
+
+      <pre><code>// Pact Contract Verification (src/test/java/com/college/cicd/PactContractTest.java)
+@Test
+void testSchemaDriftCausesFailure() {
+    Map&lt;String, Object&gt; result = contractService.verifyContract(true);
+    assertEquals("FAIL", result.get("contractStatus"));
+    assertFalse((Boolean) result.get("passed"));
+}</code></pre>
+    </div>
+
+    <!-- 4. Testcontainers -->
+    <div class="card-plain">
+      <h3>4. Real Infrastructure Testing &mdash; Testcontainers</h3>
+      <p>Runs real Dockerized dependencies (PostgreSQL 15) during automated test execution. Evaluates host Docker availability dynamically; runs the live container test if Docker is active or skips cleanly if the engine is absent.</p>
+
+      <div class="control-group">
+        <span>Host Docker Engine:</span>
+        <span id="docker-engine-badge" class="badge">Checking...</span>
+        <button onclick="checkDockerStatus()">Refresh Host Check</button>
+      </div>
+      <p id="docker-engine-msg" style="font-size: 0.85rem; color: var(--text-muted);"></p>
+
+      <pre><code>// Testcontainers PostgreSQL Configuration (src/test/java/com/college/cicd/PostgresTestcontainersTest.java)
+@Container
+static PostgreSQLContainer&lt;?&gt; postgres = new PostgreSQLContainer&lt;&gt;("postgres:15-alpine")
+    .withDatabaseName("testdb")
+    .withUsername("postgres")
+    .withPassword("secret");</code></pre>
+    </div>
+
+    <!-- Master Action: Run All Automated Tests -->
+    <div class="card-plain" style="border-top: 2px solid var(--accent-color);">
+      <h3>Execute Configured Automated Test Suite (All 8 Tests)</h3>
+      <p>Runs the full automated test suite (Calculator Unit, Product Domain Logic, Pricing &amp; Tax Rules, MockMvc Post API, MockMvc Product API, Pact Contract, Testcontainers Specification &amp; Container Lifecycle).</p>
+      
+      <div class="control-group">
+        <button class="btn-primary" id="btn-run-all-tests" onclick="runAutomatedTestSuite()">Run All Automated Tests</button>
+        <span id="test-executing-spinner" style="display: none; font-size: 0.9rem; color: var(--text-muted);">Executing tests...</span>
+      </div>
+
+      <div id="test-suite-summary-box" class="result-box" style="display: none;">
+        <h4>Automated Test Suite Summary</h4>
+        <div style="margin: 8px 0; display: flex; gap: 16px; flex-wrap: wrap;">
+          <span>Total Tests: <strong id="summary-total">0</strong></span>
+          <span>Passed: <strong id="summary-passed" style="color: var(--success-color);">0</strong></span>
+          <span>Failed: <strong id="summary-failed" style="color: var(--error-color);">0</strong></span>
+          <span>Skipped: <strong id="summary-skipped" style="color: var(--warning-color);">0</strong></span>
+          <span>Duration: <strong id="summary-duration">0</strong> ms</span>
+          <span>Overall: <span id="summary-overall-badge" class="badge"></span></span>
+        </div>
+
+        <table id="test-results-table">
+          <thead>
+            <tr>
+              <th>Test Name</th>
+              <th>Category</th>
+              <th>Status</th>
+              <th>Duration</th>
+              <th>Details / Assertion</th>
+            </tr>
+          </thead>
+          <tbody id="test-results-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section D: Git Repository & CI Pipeline -->
+  <section id="ci-pipeline">
+    <h2>D. Git Repository &amp; CI Pipeline (GitHub Actions)</h2>
+    <p>A configured Git repository with automated continuous integration workflows executing on commit pushes.</p>
+
+    <!-- Git Repository Details -->
+    <div class="card-plain">
+      <h3>Active Git Repository Information</h3>
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 8px;">
+        <div><strong>Repository:</strong> <code id="git-repo-name">experiment-9-cicd-pipeline</code></div>
+        <div><strong>Active Branch:</strong> <span id="git-branch" class="badge badge-pass">main</span></div>
+        <div><strong>Latest Commit SHA:</strong> <code id="git-commit-hash">c1e4fa8</code></div>
+        <div><strong>Author:</strong> <span id="git-author">Student Developer</span></div>
+      </div>
+      <div style="margin-top: 8px;">
+        <strong>Latest Commit Message:</strong> <span id="git-commit-msg" style="color: var(--text-secondary); font-style: italic;">Loading...</span>
+      </div>
+
+      <div style="margin-top: 14px;">
+        <h4>Recent Commit History (<code>git log</code>)</h4>
+        <table>
+          <thead>
+            <tr>
+              <th>Commit SHA</th>
+              <th>Author</th>
+              <th>Timestamp</th>
+              <th>Commit Message</th>
+            </tr>
+          </thead>
+          <tbody id="git-commits-tbody">
+            <tr><td colspan="4">Loading git log...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CI Workflow Configuration -->
+    <div class="card-plain">
+      <h3>GitHub Actions Workflow Definition (<code>.github/workflows/ci.yml</code>)</h3>
+      <pre><code>name: CI Pipeline - Automated Build &amp; Testing
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Build &amp; Test Suite
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Compile Application
+        run: mvn compile --batch-mode
+
+      - name: Run Automated Tests
+        run: mvn test --batch-mode
+
+      - name: Upload Test Report Artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: surefire-test-reports
+          path: target/surefire-reports/</code></pre>
+    </div>
+
+    <!-- Trigger Local Build & CI Simulation -->
+    <div class="card-plain">
+      <h3>Execute CI Pipeline Workflow</h3>
+      <p>Simulates the exact step-by-step execution of a GitHub Actions runner (<code>ubuntu-latest</code>) and executes local Maven verification.</p>
+      
+      <div class="control-group">
+        <button class="btn-primary" onclick="simulateGitHubActionsCI()">Trigger GitHub Actions CI Run</button>
+        <button onclick="runLocalBuild()">Run Local Maven Compilation</button>
+      </div>
+
+      <div id="ci-runner-simulation" class="result-box" style="display: none; margin-top: 10px;">
+        <h4>GitHub Actions Runner: <code>build-and-test</code> on <code>ubuntu-latest</code></h4>
+        <div id="ci-steps-container" style="margin: 10px 0;"></div>
+      </div>
+
+      <div id="build-result-box" class="result-box" style="display: none;">
+        <div><strong>Local Build Status:</strong> <span id="local-build-status" class="badge"></span></div>
+        <p id="local-build-msg" style="margin: 6px 0;"></p>
+        <pre><code id="local-build-output"></code></pre>
+      </div>
+
+      <div style="margin-top: 12px; font-size: 0.85rem; color: var(--text-muted);">
+        <strong>To link with an external GitHub repository:</strong><br>
+        <code>git remote add origin https://github.com/&lt;your-username&gt;/experiment-9-cicd.git</code><br>
+        <code>git push -u origin main</code>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section E: Docker and Continuous Deployment -->
+  <section id="docker-cd">
+    <h2>E. Docker and Continuous Deployment (Container Registry)</h2>
+    <p>Packages the verified Spring Boot application into an immutable container image with multi-stage build optimization and non-root security compliance.</p>
+
+    <div class="card-plain">
+      <h3>Multi-Stage Dockerfile (<code>Dockerfile</code>)</h3>
+      <pre><code># Stage 1: Build stage with Maven and JDK 17
+FROM maven:3.9.6-eclipse-temurin-17 AS builder
+WORKDIR /workspace/app
+COPY pom.xml .
+RUN mvn dependency:go-offline -B
+COPY src ./src
+RUN mvn clean package -DskipTests
+
+# Stage 2: Minimal Runtime JRE image
+FROM eclipse-temurin:17-jre-jammy
+WORKDIR /app
+RUN useradd -u 1001 -m cicduser
+USER cicduser
+COPY --from=builder /workspace/app/target/experiment-9-cicd-pipeline-1.0.0.jar app.jar
+EXPOSE 8089
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+  CMD curl -f http://localhost:8089/api/pipeline/overview || exit 1
+ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre>
+    </div>
+
+    <!-- Container Registry & Image Catalog -->
+    <div class="card-plain">
+      <div class="control-group" style="justify-content: space-between;">
+        <h3>Local Container Image Catalog &amp; Registry</h3>
+        <button class="btn-primary" onclick="triggerDockerBuild()">Build Docker Image (v2.0.0)</button>
+      </div>
+      <p>Displays all built container images registered in the local image catalog ready for deployment:</p>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Repository</th>
+            <th>Tag</th>
+            <th>Image ID</th>
+            <th>Virtual Size</th>
+            <th>Base Image</th>
+            <th>Created</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="docker-images-tbody">
+          <tr><td colspan="7">Loading registered images...</td></tr>
+        </tbody>
+      </table>
+
+      <div id="docker-build-result" class="result-box" style="display: none; margin-top: 10px;">
+        <div><strong>Image Build Status:</strong> <span id="docker-build-badge" class="badge"></span></div>
+        <p id="docker-build-text" style="margin-top: 6px;"></p>
+        <div id="docker-layers-list" style="margin-top: 6px;"></div>
+      </div>
+    </div>
+
+    <div class="card-plain">
+      <h3>CD Pipeline Configuration (<code>.github/workflows/cd.yml</code>)</h3>
+      <p>Uses GitHub repository secrets for credentials. Never hardcode credentials into source code.</p>
+      <pre><code>- name: Log in to Docker Hub
+  uses: docker/login-action@v3
+  with:
+    username: ${{ secrets.DOCKER_HUB_USERNAME }}
+    password: ${{ secrets.DOCKER_HUB_TOKEN }}
+
+- name: Build and Push Docker Image
+  uses: docker/build-push-action@v5
+  with:
+    context: .
+    push: true
+    tags: ${{ secrets.DOCKER_HUB_USERNAME }}/experiment-9-app:v2.0.0</code></pre>
+    </div>
+  </section>
+
+  <!-- Section F: Canary Deployment -->
+  <section id="canary">
+    <h2>F. Canary Deployment Strategy</h2>
+    <p>Safely tests the newly built image (<code>v2.0.0</code>) by directing a small percentage of live traffic before committing to a full cluster rollout.</p>
+
+    <div class="card-plain">
+      <h3>Traffic Distribution Status</h3>
+      <p>Stable Release: <strong>v1.0.0</strong> &nbsp;|&nbsp; Canary Release: <strong>v2.0.0</strong> <span class="simulation-tag">(Live Request Router Simulation)</span></p>
+
+      <div class="traffic-bar-container">
+        <div id="traffic-stable-bar" class="traffic-stable" style="width: 90%;">Stable v1: 90%</div>
+        <div id="traffic-canary-bar" class="traffic-canary" style="width: 10%;">Canary v2: 10%</div>
+      </div>
+
+      <div class="control-group">
+        <span>Current Canary Rollout: <strong id="canary-percent-text">10%</strong></span>
+        <button onclick="setCanaryPercentage(10)">Set 10% (Initial)</button>
+        <button onclick="setCanaryPercentage(25)">Set 25%</button>
+        <button onclick="setCanaryPercentage(50)">Set 50%</button>
+        <button class="btn-primary" onclick="setCanaryPercentage(100)">100% (Full Release)</button>
+        <button class="btn-danger" onclick="rollbackCanary()">Rollback (0%)</button>
+      </div>
+
+      <div style="margin: 12px 0;">
+        <strong>Simulated Health Checks &amp; SLO Metrics:</strong>
+        <span class="simulation-tag">(Simulated Telemetry)</span>
+        <ul style="margin-top: 6px;">
+          <li>Canary Health Status: <span id="health-status-badge" class="badge badge-pass">HEALTHY</span></li>
+          <li>Canary Error Rate: <strong id="health-error-rate">0.02%</strong> (SLO Target: &lt; 1.0%)</li>
+          <li>Response Latency (P95): <strong id="health-latency">26 ms</strong></li>
+          <li>Rollback Mechanism: <strong>Armed and instant</strong></li>
+        </ul>
+      </div>
+
+      <div style="border-top: 1px solid var(--border-color); padding-top: 12px; margin-top: 12px;">
+        <h4>Live Request Router</h4>
+        <p>Send requests through the live backend routing logic to test traffic distribution according to the configured rollout percentage.</p>
+        <div class="control-group">
+          <button class="btn-primary" onclick="sendCanarySingleRequest()">Send 1 Request</button>
+          <button class="btn-primary" onclick="sendCanaryBatchRequests(10)">Send 10 Batch Requests</button>
+          <button onclick="resetCanaryCounters()">Reset Counters</button>
+          <span>Total: <strong id="cnt-total">0</strong> | Stable: <strong id="cnt-stable">0</strong> | Canary: <strong id="cnt-canary">0</strong></span>
+        </div>
+
+        <div id="canary-routing-log" class="result-box" style="display: none; max-height: 200px; overflow-y: auto;">
+          <strong>Recent Routed Request Traces:</strong>
+          <table style="margin-top: 6px;">
+            <thead>
+              <tr>
+                <th>Request ID</th>
+                <th>Threshold Roll</th>
+                <th>Routed Version</th>
+                <th>Release Type</th>
+                <th>Latency</th>
+              </tr>
+            </thead>
+            <tbody id="canary-traces-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section G: Reports and Logs -->
+  <section id="reports">
+    <h2>G. Reports and Logs</h2>
+    <div style="display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 14px;">
+      <div>Latest Build Status: <strong id="rep-build">NOT_RUN</strong></div>
+      <div>Latest Test Suite: <strong id="rep-test">NOT_RUN</strong></div>
+      <div>Deployment Status: <strong id="rep-deploy">v1.0.0 (Stable)</strong></div>
+      <div>Host Docker: <strong id="rep-docker">Checking...</strong></div>
+    </div>
+
+    <div class="control-group" style="justify-content: space-between;">
+      <h3>Execution Logs</h3>
+      <div>
+        <button onclick="fetchLogs()">Refresh Logs</button>
+        <button class="btn-danger" onclick="clearLogs()">Clear Displayed Logs</button>
+      </div>
+    </div>
+
+    <div id="logs-console" class="logs-console">
+      <div class="log-entry">[SYSTEM] Initializing console logs...</div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer>
+    <p>Experiment 9: CI/CD Pipeline with Testing &amp; Deployment &bull; Full Stack Lab &bull; Practical Exam Implementation</p>
+  </footer>
+
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
