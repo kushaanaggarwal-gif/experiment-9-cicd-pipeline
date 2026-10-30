@@ -21,6 +21,19 @@ public class GitRepositoryService {
         String branch = executeGitCommand("git", "branch", "--show-current");
         status.put("branch", branch != null && !branch.isEmpty() ? branch.trim() : "main");
 
+        // Get remote origin URL
+        String remoteUrl = executeGitCommand("git", "config", "--get", "remote.origin.url");
+        if (remoteUrl != null && !remoteUrl.isEmpty()) {
+            remoteUrl = remoteUrl.replace(".git", "");
+            status.put("remoteUrl", remoteUrl);
+            status.put("actionsUrl", remoteUrl + "/actions");
+            status.put("ciWorkflowUrl", remoteUrl + "/actions/workflows/ci.yml");
+            status.put("cdWorkflowUrl", remoteUrl + "/actions/workflows/cd.yml");
+        } else {
+            status.put("remoteUrl", "https://github.com/kushaanaggarwal-gif/experiment-9-cicd-pipeline");
+            status.put("actionsUrl", "https://github.com/kushaanaggarwal-gif/experiment-9-cicd-pipeline/actions");
+        }
+
         // Get latest commit hash
         String commitHash = executeGitCommand("git", "rev-parse", "HEAD");
         status.put("commitHash", commitHash != null && !commitHash.isEmpty() ? commitHash.trim() : "Initial Commit");

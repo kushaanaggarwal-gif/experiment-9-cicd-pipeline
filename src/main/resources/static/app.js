@@ -414,6 +414,13 @@ async function loadGitStatus() {
     document.getElementById("git-author").textContent = data.author;
     document.getElementById("git-commit-msg").textContent = data.commitMessage;
 
+    if (data.remoteUrl && document.getElementById("git-repo-link")) {
+      document.getElementById("git-repo-link").href = data.remoteUrl;
+    }
+    if (data.actionsUrl && document.getElementById("git-actions-link")) {
+      document.getElementById("git-actions-link").href = data.actionsUrl;
+    }
+
     const tbody = document.getElementById("git-commits-tbody");
     tbody.innerHTML = "";
 

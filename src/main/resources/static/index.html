@@ -370,12 +370,16 @@ static PostgreSQLContainer&lt;?&gt; postgres = new PostgreSQLContainer&lt;&gt;("
 
     <!-- Git Repository Details -->
     <div class="card-plain">
-      <h3>Active Git Repository Information</h3>
+      <h3>Active GitHub Repository &amp; Live Remote Link</h3>
       <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-top: 8px;">
         <div><strong>Repository:</strong> <code id="git-repo-name">experiment-9-cicd-pipeline</code></div>
         <div><strong>Active Branch:</strong> <span id="git-branch" class="badge badge-pass">main</span></div>
-        <div><strong>Latest Commit SHA:</strong> <code id="git-commit-hash">c1e4fa8</code></div>
-        <div><strong>Author:</strong> <span id="git-author">Student Developer</span></div>
+        <div><strong>Latest Commit SHA:</strong> <code id="git-commit-hash">989a226</code></div>
+        <div><strong>Author:</strong> <span id="git-author">kushaan2640s</span></div>
+      </div>
+      <div style="margin-top: 10px; display: flex; gap: 12px; flex-wrap: wrap;">
+        <a id="git-repo-link" href="https://github.com/kushaanaggarwal-gif/experiment-9-cicd-pipeline" target="_blank" style="color: var(--accent-color); font-weight: 600; text-decoration: underline;">View Repository on GitHub &rarr;</a>
+        <a id="git-actions-link" href="https://github.com/kushaanaggarwal-gif/experiment-9-cicd-pipeline/actions" target="_blank" style="color: var(--accent-color); font-weight: 600; text-decoration: underline;">Open GitHub Actions Runs &rarr;</a>
       </div>
       <div style="margin-top: 8px;">
         <strong>Latest Commit Message:</strong> <span id="git-commit-msg" style="color: var(--text-secondary); font-style: italic;">Loading...</span>
@@ -399,15 +403,20 @@ static PostgreSQLContainer&lt;?&gt; postgres = new PostgreSQLContainer&lt;&gt;("
       </div>
     </div>
 
-    <!-- CI Workflow Configuration -->
+    <!-- Separate Workflows: CI and CD -->
     <div class="card-plain">
-      <h3>GitHub Actions Workflow Definition (<code>.github/workflows/ci.yml</code>)</h3>
+      <h3>1. CI Pipeline Workflow Definition (<code>.github/workflows/ci.yml</code>)</h3>
+      <p>Dedicated purely to Continuous Integration: Triggers on push or PR to <code>main</code>, provisions JDK 17, compiles code, runs all unit/integration/contract tests, and uploads surefire test reports.</p>
+      <div style="margin-bottom: 6px;">
+        <a href="https://github.com/kushaanaggarwal-gif/experiment-9-cicd-pipeline/actions/workflows/ci.yml" target="_blank" style="font-size: 0.85rem; color: var(--accent-color); text-decoration: underline;">View CI Workflow Runs on GitHub &rarr;</a>
+      </div>
       <pre><code>name: CI Pipeline - Automated Build &amp; Testing
 on:
   push:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   build-and-test:
@@ -436,6 +445,47 @@ jobs:
         with:
           name: surefire-test-reports
           path: target/surefire-reports/</code></pre>
+    </div>
+
+    <div class="card-plain">
+      <h3>2. CD Pipeline Workflow Definition (<code>.github/workflows/cd.yml</code>)</h3>
+      <p>Dedicated purely to Continuous Deployment &amp; Canary Rollout: Triggers automatically when the CI pipeline passes on <code>main</code> or via manual release dispatch. Builds the multi-stage Docker image and deploys the Canary release (v2.0.0) alongside Stable (v1.0.0).</p>
+      <div style="margin-bottom: 6px;">
+        <a href="https://github.com/kushaanaggarwal-gif/experiment-9-cicd-pipeline/actions/workflows/cd.yml" target="_blank" style="font-size: 0.85rem; color: var(--accent-color); text-decoration: underline;">View CD Workflow Runs on GitHub &rarr;</a>
+      </div>
+      <pre><code>name: CD Pipeline - Containerization &amp; Canary Deployment
+on:
+  workflow_run:
+    workflows: ["CI Pipeline - Automated Build &amp; Testing"]
+    types: [ completed ]
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      canary_traffic_percentage:
+        description: 'Initial Canary traffic percentage (e.g. 10, 25)'
+        required: true
+        default: '10'
+
+jobs:
+  docker-build-and-deploy:
+    name: Build Docker Image &amp; Deploy Canary Release
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker Image
+        run: |
+          docker build -t experiment-9-app:v2.0.0 -t experiment-9-app:latest .
+          docker images
+
+      - name: Deploy Canary Release
+        run: |
+          echo "Deploying Canary release v2.0.0 alongside Stable v1.0.0"</code></pre>
     </div>
 
     <!-- Trigger Local Build & CI Simulation -->
