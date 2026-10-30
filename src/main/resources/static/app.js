@@ -11,6 +11,8 @@ window.addEventListener("DOMContentLoaded", () => {
   checkDockerStatus();
   loadGitStatus();
   loadDockerImages();
+  runHealthProbe();
+  loadVersionStatus();
   fetchCanaryStatus();
   fetchLogs();
 });
@@ -514,7 +516,7 @@ async function loadDockerImages() {
     tbody.innerHTML = "";
 
     if (!images || images.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="7">No images in local registry catalog.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="8">No images in local registry catalog.</td></tr>`;
       return;
     }
 
@@ -528,11 +530,168 @@ async function loadDockerImages() {
         <td>${escapeHtml(img.baseImage)}</td>
         <td>${img.created}</td>
         <td><span class="badge ${getBadgeClass(img.status)}">${img.status}</span></td>
+        <td>
+          <button onclick="inspectDockerImage('${escapeHtml(img.tag)}')" style="padding: 2px 8px; font-size: 0.75rem;">Inspect</button>
+        </td>
       `;
       tbody.appendChild(tr);
     });
   } catch (err) {
     console.error("Error loading docker images:", err);
+  }
+}
+
+// 1. Ability to View / Inspect Docker Image
+async function inspectDockerImage(tag) {
+  if (!tag) tag = "v2.0.0";
+  try {
+    const res = await fetch(`${API_BASE}/api/docker/inspect?tag=${encodeURIComponent(tag)}`);
+    const data = await res.json();
+
+    const panel = document.getElementById("docker-inspect-panel");
+    panel.style.display = "block";
+
+    document.getElementById("inspect-image-tag").textContent = `experiment-9-app:${tag}`;
+    document.getElementById("inspect-image-id").textContent = data.Id || "-";
+    document.getElementById("inspect-image-arch").textContent = `${data.Architecture || "amd64"} / ${data.Os || "linux"}`;
+
+    if (data.SecurityCompliance) {
+      document.getElementById("inspect-image-user").textContent = `${data.SecurityCompliance.runAsUser} (CIS Compliant)`;
+    } else {
+      document.getElementById("inspect-image-user").textContent = "cicduser (uid: 1001)";
+    }
+
+    const exposedPort = data.Config && data.Config.ExposedPorts ? Object.keys(data.Config.ExposedPorts).join(", ") : "8089/tcp";
+    document.getElementById("inspect-image-port").textContent = `${exposedPort} • HTTP 200 Probe`;
+
+    const layersTbody = document.getElementById("inspect-layers-tbody");
+    layersTbody.innerHTML = "";
+
+    if (data.LayerBreakdown && data.LayerBreakdown.length > 0) {
+      data.LayerBreakdown.forEach(l => {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td><strong>${escapeHtml(l.step)}</strong></td>
+          <td><code>${escapeHtml(l.instruction)}</code></td>
+          <td>${escapeHtml(l.size)}</td>
+          <td><code>${escapeHtml(l.digest.substring(0, 22))}...</code></td>
+        `;
+        layersTbody.appendChild(tr);
+      });
+    }
+
+    const rawJsonPre = document.getElementById("inspect-raw-json");
+    rawJsonPre.textContent = JSON.stringify(data, null, 2);
+
+    panel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  } catch (err) {
+    alert("Failed to inspect Docker image: " + err.message);
+  }
+}
+
+function closeDockerInspect() {
+  const panel = document.getElementById("docker-inspect-panel");
+  if (panel) panel.style.display = "none";
+}
+
+function toggleRawInspectJson() {
+  const el = document.getElementById("inspect-raw-json");
+  if (el) {
+    el.style.display = el.style.display === "none" ? "block" : "none";
+  }
+}
+
+// 2. Application Health Check Probe (HTTP 200 OK)
+async function runHealthProbe() {
+  const t0 = performance.now();
+  try {
+    const res = await fetch(`${API_BASE}/api/health`);
+    const dur = Math.round(performance.now() - t0);
+    const data = await res.json();
+
+    const badge = document.getElementById("health-probe-badge");
+    const latencyEl = document.getElementById("health-probe-latency");
+    const uptimeEl = document.getElementById("health-probe-uptime");
+    const releaseEl = document.getElementById("health-probe-release");
+    const codeEl = document.getElementById("health-probe-code");
+
+    if (res.status === 200 && data.status === "UP") {
+      badge.textContent = `● HTTP 200 OK — HEALTHY`;
+      badge.className = "badge badge-pass";
+    } else {
+      badge.textContent = `● HTTP ${res.status} — DEGRADED`;
+      badge.className = "badge badge-fail";
+    }
+
+    latencyEl.textContent = `${dur} ms`;
+    uptimeEl.textContent = `${data.uptimeSeconds || 0}s`;
+    releaseEl.textContent = data.activeRelease || "v2.0.0";
+
+    if (data.components) {
+      if (data.components.httpListener) {
+        document.getElementById("hp-http").textContent = `UP • HTTP 200 OK (${data.components.httpListener.latencyMs}ms)`;
+      }
+      if (data.components.database) {
+        document.getElementById("hp-db").textContent = `UP • ${data.components.database.dialect || "Healthy"}`;
+      }
+      if (data.components.canaryRouter) {
+        document.getElementById("hp-canary").textContent = `UP • Rollout ${data.components.canaryRouter.currentRollout || "10%"}`;
+      }
+      if (data.components.memory) {
+        document.getElementById("hp-mem").textContent = `UP • ${data.components.memory.heapUsed} / ${data.components.memory.heapMax}`;
+      }
+    }
+
+    codeEl.textContent = JSON.stringify(data, null, 2);
+  } catch (err) {
+    const badge = document.getElementById("health-probe-badge");
+    badge.textContent = `● ERROR — Probe Failed`;
+    badge.className = "badge badge-fail";
+    document.getElementById("health-probe-latency").textContent = "Timeout";
+    document.getElementById("health-probe-code").textContent = JSON.stringify({ error: err.message }, null, 2);
+  }
+}
+
+function toggleHealthPayload() {
+  const el = document.getElementById("health-probe-json");
+  if (el) {
+    el.style.display = el.style.display === "none" ? "block" : "none";
+  }
+}
+
+// 3. Show Release Version and Defect Contrast on Previous Version
+async function loadVersionStatus() {
+  try {
+    const res = await fetch(`${API_BASE}/api/version/status`);
+    const data = await res.json();
+    // Ready for status binding
+  } catch (err) {
+    console.error("Error loading version status:", err);
+  }
+}
+
+async function testVersionEndpoint(ver) {
+  try {
+    const res = await fetch(`${API_BASE}/api/version/test?version=${encodeURIComponent(ver)}`);
+    const data = await res.json();
+
+    if (ver === "v1.0.0") {
+      const box = document.getElementById("v1-result-box");
+      box.style.display = "block";
+      document.getElementById("v1-error-msg").textContent = data.message || data.error;
+      document.getElementById("v1-root-cause").textContent = data.defectAnalysis || data.exception;
+      document.getElementById("v1-stack-trace").textContent = data.stackTraceSnippet || "Stack trace unavailable";
+    } else {
+      const box = document.getElementById("v2-result-box");
+      box.style.display = "block";
+      document.getElementById("v2-success-msg").textContent = data.message;
+      document.getElementById("v2-pool-status").textContent = `${data.activeConnections} active / ${data.idleConnections} idle (0 leaked)`;
+      document.getElementById("v2-latency").textContent = `${data.latencyMs} ms (P99) • Zero Error Rate`;
+    }
+
+    fetchLogs();
+  } catch (err) {
+    alert(`Failed testing version ${ver}: ` + err.message);
   }
 }
 

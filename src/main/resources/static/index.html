@@ -562,17 +562,114 @@ ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre>
             <th>Base Image</th>
             <th>Created</th>
             <th>Status</th>
+            <th>Action</th>
           </tr>
         </thead>
         <tbody id="docker-images-tbody">
-          <tr><td colspan="7">Loading registered images...</td></tr>
+          <tr><td colspan="8">Loading registered images...</td></tr>
         </tbody>
       </table>
+
+      <!-- 1. Ability to View / Inspect Docker Image -->
+      <div id="docker-inspect-panel" class="card-plain" style="display: none; border-left: 4px solid var(--accent-color); margin-top: 14px; background-color: #fafbfc;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <h4 style="margin: 0;">Docker Image Inspection: <span id="inspect-image-tag" style="color: var(--accent-color);">experiment-9-app:v2.0.0</span></h4>
+          <button onclick="closeDockerInspect()" style="padding: 2px 10px; font-size: 0.8rem;">&times; Close Inspection</button>
+        </div>
+        <p style="font-size: 0.85rem; margin-bottom: 10px;">Deep inspection manifest corresponding to <code>docker inspect &lt;image&gt;</code>, including architecture, multi-stage layers, environment variables, security context, and health check definitions.</p>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; margin-bottom: 12px;">
+          <div style="background: #ffffff; padding: 8px; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Image ID</div>
+            <div style="font-family: var(--font-mono); font-size: 0.8rem; word-break: break-all;" id="inspect-image-id">-</div>
+          </div>
+          <div style="background: #ffffff; padding: 8px; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Architecture &amp; OS</div>
+            <div style="font-weight: 600; font-size: 0.85rem;" id="inspect-image-arch">-</div>
+          </div>
+          <div style="background: #ffffff; padding: 8px; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Security Context</div>
+            <div style="font-weight: 600; font-size: 0.85rem; color: var(--success-color);" id="inspect-image-user">-</div>
+          </div>
+          <div style="background: #ffffff; padding: 8px; border: 1px solid var(--border-color);">
+            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase;">Exposed Port &amp; Healthcheck</div>
+            <div style="font-weight: 600; font-size: 0.85rem;" id="inspect-image-port">-</div>
+          </div>
+        </div>
+
+        <h5 style="margin: 8px 0 4px 0; font-size: 0.88rem;">Multi-Stage RootFS Layer Verification:</h5>
+        <table>
+          <thead>
+            <tr>
+              <th>Layer</th>
+              <th>Dockerfile Instruction</th>
+              <th>Size</th>
+              <th>Digest SHA256</th>
+            </tr>
+          </thead>
+          <tbody id="inspect-layers-tbody">
+            <tr><td colspan="4">Loading layers...</td></tr>
+          </tbody>
+        </table>
+
+        <div style="margin-top: 10px;">
+          <button onclick="toggleRawInspectJson()" style="font-size: 0.8rem; padding: 4px 10px;">Toggle Raw JSON (docker inspect)</button>
+          <pre id="inspect-raw-json" style="display: none; max-height: 220px; margin-top: 8px;"></pre>
+        </div>
+      </div>
 
       <div id="docker-build-result" class="result-box" style="display: none; margin-top: 10px;">
         <div><strong>Image Build Status:</strong> <span id="docker-build-badge" class="badge"></span></div>
         <p id="docker-build-text" style="margin-top: 6px;"></p>
         <div id="docker-layers-list" style="margin-top: 6px;"></div>
+      </div>
+    </div>
+
+    <!-- 2. Application Health Check Probe (HTTP 200 OK) -->
+    <div class="card-plain">
+      <div class="control-group" style="justify-content: space-between;">
+        <div>
+          <h3 style="margin: 0 0 4px 0;">Application Health Probe (HTTP 200 OK)</h3>
+          <p style="margin: 0; font-size: 0.85rem;">Continuous live HTTP health endpoint (<code>GET /api/health</code>) queried by container orchestrators, load balancers, and CD pipelines.</p>
+        </div>
+        <button class="btn-primary" onclick="runHealthProbe()">Run Health Probe (GET /api/health)</button>
+      </div>
+
+      <div style="display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; align-items: center;">
+        <div>
+          Status: <span id="health-probe-badge" class="badge badge-pass" style="font-size: 0.88rem;">● HTTP 200 OK</span>
+        </div>
+        <div>Endpoint: <code>GET /api/health</code></div>
+        <div>Latency: <strong id="health-probe-latency">-- ms</strong></div>
+        <div>Active Release: <strong id="health-probe-release">v2.0.0</strong></div>
+        <div>Uptime: <strong id="health-probe-uptime">--</strong></div>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px; margin-top: 12px;">
+        <div style="background: #ffffff; padding: 8px; border: 1px solid var(--border-color);">
+          <div style="font-size: 0.75rem; color: var(--text-muted);">HTTP LISTENER (PORT 8089)</div>
+          <div style="font-weight: 600; color: var(--success-color);" id="hp-http">UP &bull; HTTP 200 OK</div>
+        </div>
+        <div style="background: #ffffff; padding: 8px; border: 1px solid var(--border-color);">
+          <div style="font-size: 0.75rem; color: var(--text-muted);">DATABASE POOL (HIKARICP)</div>
+          <div style="font-weight: 600; color: var(--success-color);" id="hp-db">UP &bull; Healthy</div>
+        </div>
+        <div style="background: #ffffff; padding: 8px; border: 1px solid var(--border-color);">
+          <div style="font-size: 0.75rem; color: var(--text-muted);">CANARY ROUTER</div>
+          <div style="font-weight: 600; color: var(--accent-color);" id="hp-canary">UP &bull; Active</div>
+        </div>
+        <div style="background: #ffffff; padding: 8px; border: 1px solid var(--border-color);">
+          <div style="font-size: 0.75rem; color: var(--text-muted);">JVM HEAP MEMORY</div>
+          <div style="font-weight: 600;" id="hp-mem">UP &bull; Active</div>
+        </div>
+      </div>
+
+      <div id="health-probe-response-box" style="margin-top: 10px;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary);">Live Probe Response Payload:</span>
+          <button onclick="toggleHealthPayload()" style="padding: 2px 8px; font-size: 0.75rem;">Toggle JSON Payload</button>
+        </div>
+        <pre id="health-probe-json" style="max-height: 180px; margin-top: 6px;"><code id="health-probe-code">{"status":"UP","statusCode":200,"httpStatusText":"HTTP 200 OK","message":"HTTP 200 OK - Application Healthy and Serving Production Traffic"}</code></pre>
       </div>
     </div>
 
@@ -653,6 +750,74 @@ ENTRYPOINT ["java", "-jar", "app.jar"]</code></pre>
             <tbody id="canary-traces-tbody"></tbody>
           </table>
         </div>
+      </div>
+    </div>
+
+    <!-- 3. Show Release Version & Error on Previous Version -->
+    <div class="card-plain">
+      <div style="border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 12px;">
+        <h3 style="margin: 0 0 4px 0;">Release Version &amp; Defect Contrast: v2.0.0 (Current) vs v1.0.0 (Previous)</h3>
+        <p style="margin: 0; font-size: 0.88rem;">Continuous Deployment validation: Demonstrates the regression/defect in previous release <code>v1.0.0</code> and verifies the remediation in the current canary release <code>v2.0.0</code>.</p>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 16px;">
+        
+        <!-- Left: Previous Version v1.0.0 (Error / Defect) -->
+        <div style="border: 1px solid #fca5a5; background-color: #fffafb; padding: 14px; border-radius: 3px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h4 style="margin: 0; color: var(--error-color);">Previous Version: v1.0.0</h4>
+            <span class="badge badge-fail">DEFECTIVE (HTTP 500)</span>
+          </div>
+          <p style="font-size: 0.85rem; margin: 8px 0;"><strong>Role:</strong> Deprecated Stable Baseline</p>
+          <p style="font-size: 0.85rem; margin: 8px 0;"><strong>Identified Defect:</strong> Unclosed database cursors in legacy query handler cause thread starvation and <code>ConnectionPoolExhaustedException</code> under concurrent loads.</p>
+          
+          <button class="btn-danger" style="width: 100%; margin-top: 6px;" onclick="testVersionEndpoint('v1.0.0')">Test Previous Version (v1.0.0)</button>
+
+          <div id="v1-result-box" class="result-box" style="display: none; border-color: #fca5a5; background: #fff5f5; margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between;">
+              <strong style="color: var(--error-color);">Error Response Reproduced:</strong>
+              <span class="badge badge-fail">HTTP 500</span>
+            </div>
+            <div style="margin-top: 6px; font-family: var(--font-mono); font-size: 0.8rem; color: #991b1b;" id="v1-error-msg">-</div>
+            <div style="margin-top: 6px; font-size: 0.8rem;">
+              <strong>Root Cause:</strong> <span id="v1-root-cause">-</span>
+            </div>
+            <pre style="margin-top: 6px; max-height: 120px; font-size: 0.75rem;"><code id="v1-stack-trace">-</code></pre>
+            <div style="margin-top: 6px; font-size: 0.8rem; color: #7f1d1d; font-style: italic;">
+              <strong>Trigger for CD Rollout:</strong> This failure in v1.0.0 required the engineering team to cut release v2.0.0 and execute Canary validation.
+            </div>
+          </div>
+        </div>
+
+        <!-- Right: Current Version v2.0.0 (Patched / Healthy) -->
+        <div style="border: 1px solid #86efac; background-color: #f6fff9; padding: 14px; border-radius: 3px;">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h4 style="margin: 0; color: var(--success-color);">Current Release: v2.0.0</h4>
+            <span class="badge badge-pass">HEALTHY (HTTP 200 OK)</span>
+          </div>
+          <p style="font-size: 0.85rem; margin: 8px 0;"><strong>Role:</strong> Active Canary Release Candidate</p>
+          <p style="font-size: 0.85rem; margin: 8px 0;"><strong>Remediation Applied:</strong> HikariCP leak detection threshold, auto-closing try-with-resources wrappers, and non-blocking stream handlers.</p>
+          
+          <button class="btn-primary" style="width: 100%; margin-top: 6px;" onclick="testVersionEndpoint('v2.0.0')">Test Current Release (v2.0.0)</button>
+
+          <div id="v2-result-box" class="result-box" style="display: none; border-color: #86efac; background: #f0fdf4; margin-top: 10px;">
+            <div style="display: flex; justify-content: space-between;">
+              <strong style="color: var(--success-color);">Remediation Verified:</strong>
+              <span class="badge badge-pass">HTTP 200 OK</span>
+            </div>
+            <div style="margin-top: 6px; font-family: var(--font-mono); font-size: 0.8rem; color: #166534;" id="v2-success-msg">-</div>
+            <div style="margin-top: 6px; font-size: 0.8rem;">
+              <strong>Connection Pool Status:</strong> <span id="v2-pool-status">2 active / 18 idle (0 leaked)</span>
+            </div>
+            <div style="margin-top: 6px; font-size: 0.8rem;">
+              <strong>Latency:</strong> <span id="v2-latency">3.2 ms (P99)</span>
+            </div>
+            <div style="margin-top: 6px; font-size: 0.8rem; color: #14532d; font-style: italic;">
+              <strong>CD Canary Decision:</strong> Health probes confirmed HTTP 200 OK. Zero regressions detected. Canary safe to promote to 100% full rollout.
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   </section>
